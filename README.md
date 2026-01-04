@@ -1,49 +1,49 @@
-# 🎓 Class Management System & CTF Mini-game
+# 🏫 HỆ THỐNG QUẢN LÝ LỚP HỌC
 
-Một hệ thống quản lý lớp học trực tuyến đơn giản kết hợp với trò chơi giải đố (CTF Challenge), được xây dựng bằng **Java Servlet, JSP và MySQL**. Dự án này tập trung vào việc xử lý logic thuần (không dùng Framework như Spring) để hiểu rõ cơ chế hoạt động của Web Server.
-
-## 🚀 Tính năng chính
-
-### 1. Phân quyền (Authentication & Authorization)
-* **Role:** Hệ thống chia làm 2 quyền: **TEACHER** (Giáo viên) và **STUDENT** (Học sinh).
-* **Login:** Cơ chế đăng nhập bảo mật, lưu trạng thái bằng `HttpSession`.
-* **Security Filter:** Chặn truy cập trái phép (Học sinh không thể vào trang quản trị của Giáo viên).
-
-### 2. Quản lý Lớp học (Core Features)
-* **Giáo viên:**
-    * Thêm, sửa, xóa học sinh.
-    * Tạo bài tập (Assignments) và upload file đề bài.
-    * Xem danh sách bài nộp của học sinh.
-* **Học sinh:**
-    * Xem danh sách bài tập.
-    * Nộp bài làm (Upload file).
-    * Cập nhật thông tin cá nhân.
-
-### 3. 🔥 CTF Challenge (Trò chơi giải đố)
-Đây là tính năng đặc biệt của dự án:
-* **Giáo viên:** Upload một file văn bản (ví dụ: `bai tho.txt`) và đưa ra một gợi ý (Hint). Hệ thống **không** lưu đáp án vào Database mà chỉ lưu đường dẫn file.
-* **Học sinh:** Dựa vào gợi ý để đoán tên file.
-    * *Logic:* Hệ thống sẽ lấy input của học sinh + đuôi `.txt` để tìm file trên ổ cứng server.
-    * Nếu tìm thấy file -> Trả về nội dung (Win).
-    * Nếu không tìm thấy -> Báo sai.
+## 1. Introduction
+Ứng dụng web quản lý lớp học trực tuyến, cho phép Giáo viên quản lý sinh viên, giao bài tập và tổ chức các Challenge dựa trên thao tác với file hệ thống. 
+Dự án được xây dựng theo mô hình MVC sử dụng Java.
 
 ---
 
-## 🛠 Công nghệ sử dụng (Tech Stack)
+## 2. Functional Requirements
 
-* **Ngôn ngữ:** Java 17+ (Hỗ trợ Java 21/25).
-* **Web Core:** Jakarta Servlet, JSP (JavaServer Pages).
-* **Frontend:** HTML5, CSS3, Bootstrap 5, JSTL.
-* **Database:** MySQL 8.0+.
-* **Server:** Apache Tomcat 10.1.x.
-* **Build Tool:** Maven.
-* **IDE:** IntelliJ IDEA Ultimate.
+Hệ thống gồm 2 vai trò chính: **Giáo viên (TEACHER)** và **Sinh viên (STUDENT)**.
+
+### 👤 User Management
+Thông tin người dùng gồm: `username`, `password`, `fullname`, `email`, `phone`.
+
+| Chức năng | Giáo viên | Sinh viên | Ghi chú |
+| :--- | :---: | :---: | :--- |
+| **Đăng nhập/Đăng xuất** | ✅ | ✅ | Sử dụng Session để lưu phiên làm việc. |
+| **Xem danh sách User** | ✅ | ✅ | Xem danh sách tất cả thành viên trong hệ thống (Ẩn password). |
+| **Xem chi tiết User** | ✅ | ✅ | Xem thông tin cụ thể của 1 người khác. |
+| **Thêm/Sửa/Xóa SV** | ✅ | ❌ | Giáo viên có toàn quyền quản lý sinh viên. |
+| **Cập nhật bản thân** | ✅ | ⚠️ | SV chỉ sửa được `email`, `phone`. **Không** được sửa `username`, `fullname`. |
+
+### 📚 Assignments
+| Chức năng | Giáo viên | Sinh viên | Ghi chú |
+| :--- | :---: | :---: | :--- |
+| **Giao bài tập** | ✅ | ❌ | Upload file đề bài (PDF/DOCX...). |
+| **Xem list bài tập** | ✅ | ✅ | Sinh viên xem và tải file đề bài về. |
+| **Nộp bài (Submit)** | ❌ | ✅ | Sinh viên upload file bài làm lên hệ thống. |
+| **Xem bài đã nộp** | ✅ | ⚠️ | Giáo viên xem được bài của tất cả SV. SV chỉ xem được bài của mình. |
+
+### 🧩Features
+Mô phỏng một mini-game CTF (Capture The Flag) dạng Web/Misc.
+
+* **Logic:**
+    1.  **Giáo viên:**
+        * Chuẩn bị 1 file `.txt` (nội dung là thơ, văn...).
+        * Đặt tên file là đáp án (viết không dấu, cách nhau bởi khoảng trắng). Ví dụ: `bai tho.txt`.
+        * Nhập "Gợi ý" (Hint) và Upload file lên.
+        * **Yêu cầu hệ thống:** Chỉ lưu đường dẫn file và gợi ý vào Database. **KHÔNG lưu đáp án (tên file) vào Database.**
+    2.  **Sinh viên:**
+        * Xem gợi ý.
+        * Nhập đáp án vào ô Input (Ví dụ nhập: `bai tho`).
+        * Hệ thống kiểm tra: Lấy input ghép với đuôi `.txt` -> Kiểm tra xem file có tồn tại trên ổ cứng server không.
+        * **Kết quả:**
+            * Đúng: Đọc nội dung file `.txt` và hiển thị lên màn hình.
+            * Sai: Báo lỗi "Sai đáp án".
 
 ---
-
-## ⚙️ Hướng dẫn Cài đặt (Installation)
-
-### Bước 1: Clone dự án
-```bash
-git clone [https://github.com/username/ClassManager.git](https://github.com/username/ClassManager.git)
-cd ClassManager
