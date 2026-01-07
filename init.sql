@@ -1,7 +1,7 @@
--- 1. Drop Database if exists
+-- 1. Drop Database
 SET NAMES 'utf8mb4';
 DROP DATABASE IF EXISTS Quanlyclass;
--- 2. Create Database
+-- Create Database
 CREATE DATABASE Quanlyclass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE Quanlyclass;
 
