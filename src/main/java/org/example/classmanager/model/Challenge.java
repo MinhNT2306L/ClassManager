@@ -5,14 +5,16 @@ import java.sql.Timestamp;
 public class Challenge {
     private Long id;
     private String hint;
+    private String filePath;
     private Timestamp createdAt;
 
     public Challenge() {
     }
 
-    public Challenge(Long id, String hint, Timestamp createdAt) {
+    public Challenge(Long id, String hint, String filePath, Timestamp createdAt) {
         this.id = id;
         this.hint = hint;
+        this.filePath = filePath;
         this.createdAt = createdAt;
     }
 
@@ -30,6 +32,14 @@ public class Challenge {
 
     public void setHint(String hint) {
         this.hint = hint;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
     public Timestamp getCreatedAt() {

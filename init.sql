@@ -1,7 +1,8 @@
--- 1. Xóa Database nếu đã tồn tại
+-- 1. Drop Database if exists
+SET NAMES 'utf8mb4';
 DROP DATABASE IF EXISTS Quanlyclass;
 -- 2. Create Database
-CREATE DATABASE Quanlyclass;
+CREATE DATABASE Quanlyclass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE Quanlyclass;
 
 -- Bảng USERS
@@ -34,7 +35,7 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 6 Bảng SUBMISSIONS
+-- Bảng SUBMISSIONS
 CREATE TABLE submissions (
  id BIGINT AUTO_INCREMENT PRIMARY KEY,
 assignment_id BIGINT NOT NULL,
@@ -45,8 +46,7 @@ FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
 FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 7. Thêm dữ liệu mẫu vào bảng USERS
-
+-- Thêm dữ liệu mẫu
 INSERT INTO users (username, password, full_name, role)
 VALUES ('teacher1', 'teacher123', 'Nguyễn Văn A', 'TEACHER');
 

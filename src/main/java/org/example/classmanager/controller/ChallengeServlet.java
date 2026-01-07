@@ -84,6 +84,7 @@ public class ChallengeServlet extends HttpServlet {
 
             Challenge challenge = new Challenge();
             challenge.setHint(hint);
+            challenge.setFilePath(savedFileName);
             challengeDAO.createChallenge(challenge);
         }
         resp.sendRedirect("challenges");
@@ -97,10 +98,22 @@ public class ChallengeServlet extends HttpServlet {
             // implied
             // The requirement says "upload lên 1 file txt". So we verify .txt
 
-            String filename = normalizedAnswer + ".txt";
+            // Security Fix: Prevent path traversal
+            // 1. Sanitize the answer to ensure it's just a filename component
+            String safeAnswer = Paths.get(normalizedAnswer).getFileName().toString();
+            String filename = safeAnswer + ".txt";
+
             String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator
                     + "challenges";
-            File file = new File(uploadPath + File.separator + filename);
+            File uploadDir = new File(uploadPath);
+            File file = new File(uploadDir, filename);
+
+            // 2. Strong verification of path containment
+            if (!file.getCanonicalPath().startsWith(uploadDir.getCanonicalPath())) {
+                req.setAttribute("error", "Invalid path!");
+                listChallenges(req, resp);
+                return;
+            }
 
             if (file.exists()) {
                 // Return content

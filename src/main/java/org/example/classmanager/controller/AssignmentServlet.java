@@ -15,6 +15,7 @@ import org.example.classmanager.model.User;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 
@@ -151,13 +152,27 @@ public class AssignmentServlet extends HttpServlet {
         if (fileName == null || fileName.isEmpty())
             return;
 
+        // Security Fix: Prevent path traversal
+        // 1. Sanitize the filename to remove directory components
+        String keyName = Paths.get(fileName).getFileName().toString();
+
+        // 2. Resolve paths and verify containment
         String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator + type;
-        File file = new File(uploadPath + File.separator + fileName);
+        File uploadDir = new File(uploadPath);
+        File file = new File(uploadDir, keyName);
+
+        // Verify that the file is actually inside the uploadDir
+        if (!file.getCanonicalPath().startsWith(uploadDir.getCanonicalPath())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid file path");
+            return;
+        }
 
         if (file.exists()) {
             resp.setContentType("application/octet-stream");
-            resp.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+            resp.setHeader("Content-Disposition", "attachment; filename=\"" + keyName + "\"");
             Files.copy(file.toPath(), resp.getOutputStream());
+        } else {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 }

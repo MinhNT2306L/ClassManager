@@ -10,10 +10,11 @@ import java.util.List;
 public class ChallengeDAO {
 
     public void createChallenge(Challenge challenge) {
-        String query = "INSERT INTO challenges (hint) VALUES (?)";
+        String query = "INSERT INTO challenges (hint, file_path) VALUES (?, ?)";
         try (Connection conn = DBConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, challenge.getHint());
+            stmt.setString(2, challenge.getFilePath());
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -30,6 +31,7 @@ public class ChallengeDAO {
                 list.add(new Challenge(
                         rs.getLong("id"),
                         rs.getString("hint"),
+                        rs.getString("file_path"),
                         rs.getTimestamp("created_at")));
             }
         } catch (SQLException e) {

@@ -7,6 +7,7 @@
                 <html>
 
                 <head>
+                    <meta charset="UTF-8">
                     <title>Dashboard - Class Manager</title>
                     <link rel="stylesheet" href="css/style.css">
                 </head>
