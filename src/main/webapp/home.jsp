@@ -48,7 +48,7 @@
                                     style="box-shadow: none; border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
                                     <div>
                                         <h3>Users</h3>
-                                        <p>View classmates and teachers.</p>
+                                        <p>Xem thông tin</p>
                                     </div>
                                     <a href="users" class="btn" style="margin-top: 1rem;">View Users</a>
                                 </div>
@@ -56,7 +56,7 @@
                                     style="box-shadow: none; border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
                                     <div>
                                         <h3>Assignments</h3>
-                                        <p>Manage assignments and submissions.</p>
+                                        <p>Xem bài tập và bài nộp</p>
                                     </div>
                                     <a href="assignments" class="btn" style="margin-top: 1rem;">View Assignments</a>
                                 </div>
@@ -64,7 +64,7 @@
                                     style="box-shadow: none; border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
                                     <div>
                                         <h3>Challenges</h3>
-                                        <p>Solve puzzles and earn recognition.</p>
+                                        <p>CTF time</p>
                                     </div>
                                     <a href="challenges" class="btn" style="margin-top: 1rem;">Play Challenges</a>
                                 </div>

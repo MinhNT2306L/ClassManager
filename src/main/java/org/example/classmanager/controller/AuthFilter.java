@@ -29,7 +29,6 @@ public class AuthFilter implements Filter {
         boolean loggedIn = (session != null && session.getAttribute("user") != null);
 
         if (loggedIn) {
-            // Role check if needed, but for now just check login
             chain.doFilter(request, response);
         } else {
             res.sendRedirect(req.getContextPath() + "/login.jsp");

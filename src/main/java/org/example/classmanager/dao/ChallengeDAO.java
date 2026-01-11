@@ -21,6 +21,25 @@ public class ChallengeDAO {
         }
     }
 
+    public Challenge findById(Long id) {
+        String query = "SELECT * FROM challenges WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return new Challenge(
+                        rs.getLong("id"),
+                        rs.getString("hint"),
+                        rs.getString("file_path"),
+                        rs.getTimestamp("created_at"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public List<Challenge> findAll() {
         List<Challenge> list = new ArrayList<>();
         String query = "SELECT * FROM challenges ORDER BY created_at DESC";

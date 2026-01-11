@@ -34,7 +34,9 @@ public class AssignmentServlet extends HttpServlet {
             listAssignments(req, resp);
         } else if ("view_submissions".equals(action)) {
             viewSubmissions(req, resp);
-        } else if ("download".equals(action)) {
+        } else if ("view_my_submissions".equals(action)) {
+            viewMySubmissions(req, resp);
+        } else if ("download".equals(action) || "preview".equals(action)) {
             downloadFile(req, resp);
         }
     }
@@ -125,6 +127,24 @@ public class AssignmentServlet extends HttpServlet {
         req.getRequestDispatcher("submissions.jsp").forward(req, resp);
     }
 
+    private void viewMySubmissions(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.STUDENT) {
+            resp.sendRedirect("assignments");
+            return;
+        }
+
+        Long assignmentId = Long.parseLong(req.getParameter("id"));
+        Assignment assignment = assignmentDAO.findById(assignmentId);
+        List<Submission> submissions = assignmentDAO.findSubmissionsByAssignmentIdAndStudentId(assignmentId,
+                user.getId());
+
+        req.setAttribute("assignment", assignment);
+        req.setAttribute("submissions", submissions);
+        req.getRequestDispatcher("submissions.jsp").forward(req, resp);
+    }
+
     private String saveFile(Part filePart, String subDir) throws IOException {
         String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator + subDir;
         File uploadDir = new File(uploadPath);
@@ -146,6 +166,8 @@ public class AssignmentServlet extends HttpServlet {
     }
 
     private void downloadFile(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String action = req.getParameter("action");
+        boolean isPreview = "preview".equals(action);
         String type = req.getParameter("type"); // assignments or submissions
         String fileName = req.getParameter("file");
 
@@ -168,8 +190,22 @@ public class AssignmentServlet extends HttpServlet {
         }
 
         if (file.exists()) {
-            resp.setContentType("application/octet-stream");
-            resp.setHeader("Content-Disposition", "attachment; filename=\"" + keyName + "\"");
+            String contentType = getServletContext().getMimeType(file.getAbsolutePath());
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+            resp.setContentType(contentType);
+
+            String disposition = isPreview ? "inline" : "attachment";
+
+            // Extract original filename (remove UUID prefix)
+            String displayName = keyName;
+            int underscoreIndex = keyName.indexOf("_");
+            if (underscoreIndex != -1 && underscoreIndex + 1 < keyName.length()) {
+                displayName = keyName.substring(underscoreIndex + 1);
+            }
+
+            resp.setHeader("Content-Disposition", disposition + "; filename=\"" + displayName + "\"");
             Files.copy(file.toPath(), resp.getOutputStream());
         } else {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND);

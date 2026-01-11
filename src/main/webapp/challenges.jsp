@@ -67,6 +67,7 @@
                                         <form action="challenges" method="post"
                                             style="margin-top: 1rem; display: flex; gap: 1rem;">
                                             <input type="hidden" name="action" value="solve">
+                                            <input type="hidden" name="id" value="${c.id}">
                                             <input type="text" name="answer" placeholder="Enter answer..." required
                                                 style="margin-bottom: 0; flex-grow: 1;">
                                             <button type="submit" class="btn" style="width: auto;">Submit

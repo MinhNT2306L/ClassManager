@@ -85,6 +85,23 @@ public class AssignmentDAO {
         return list;
     }
 
+    public List<Submission> findSubmissionsByAssignmentIdAndStudentId(Long assignmentId, Long studentId) {
+        List<Submission> list = new ArrayList<>();
+        String query = "SELECT * FROM submissions WHERE assignment_id = ? AND student_id = ? ORDER BY submitted_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, assignmentId);
+            stmt.setLong(2, studentId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(mapSubmission(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     private Assignment mapAssignment(ResultSet rs) throws SQLException {
         return new Assignment(
                 rs.getLong("id"),

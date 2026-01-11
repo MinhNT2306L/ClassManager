@@ -1,0 +1,2081 @@
+
+==================================================
+FILE: ./test_valid.txt
+==================================================
+
+This is a valid challenge.
+
+
+==================================================
+FILE: ./pom.xml
+==================================================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>ClassManager</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>ClassManager</name>
+    <packaging>war</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.target>17</maven.compiler.target> <maven.compiler.source>17</maven.compiler.source>
+        <junit.version>5.9.2</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.servlet.jsp.jstl</groupId>
+            <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.glassfish.web</groupId>
+            <artifactId>jakarta.servlet.jsp.jstl</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+==================================================
+FILE: ./init.sql
+==================================================
+
+-- 1. Drop Database
+SET NAMES 'utf8mb4';
+DROP DATABASE IF EXISTS Quanlyclass;
+-- Create Database
+CREATE DATABASE Quanlyclass CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE Quanlyclass;
+
+-- Bảng USERS
+CREATE TABLE users (
+id BIGINT AUTO_INCREMENT PRIMARY KEY,
+username VARCHAR(50) NOT NULL UNIQUE,
+password VARCHAR(255) NOT NULL,
+full_name VARCHAR(100) NOT NULL,
+email VARCHAR(100),
+phone VARCHAR(20),
+role ENUM('TEACHER', 'STUDENT') NOT NULL
+);
+
+-- Bảng CHALLENGES
+CREATE TABLE challenges (
+id BIGINT AUTO_INCREMENT PRIMARY KEY,
+hint TEXT NOT NULL,
+file_path VARCHAR(255) NOT NULL,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Bảng ASSIGNMENTS
+CREATE TABLE assignments (
+id BIGINT AUTO_INCREMENT PRIMARY KEY,
+title VARCHAR(255) NOT NULL,
+description TEXT,
+file_path VARCHAR(255),
+teacher_id BIGINT NOT NULL,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Bảng SUBMISSIONS
+CREATE TABLE submissions (
+ id BIGINT AUTO_INCREMENT PRIMARY KEY,
+assignment_id BIGINT NOT NULL,
+student_id BIGINT NOT NULL,
+file_path VARCHAR(255) NOT NULL,
+submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Thêm dữ liệu mẫu
+INSERT INTO users (username, password, full_name, role)
+VALUES ('teacher1', 'teacher123', 'Nguyễn Văn A', 'TEACHER');
+
+INSERT INTO users (username, password, full_name, role)
+VALUES ('student1', 'student123', 'Nguyễn Văn B', 'STUDENT');
+
+INSERT INTO assignments (title, description, teacher_id)
+VALUES ('Java basic', 'làm bài 3', 1);
+
+
+==================================================
+FILE: ./docker-compose.yml
+==================================================
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_URL=jdbc:mysql://mysql-db:3306/Quanlyclass
+      - DB_USER=root
+      - DB_PASSWORD=12345678
+    depends_on:
+      - mysql-db
+    volumes:
+      - ./uploads:/usr/local/tomcat/webapps/ROOT/uploads
+
+  mysql-db:
+    image: mysql:8.0
+    restart: always
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: Quanlyclass
+      MYSQL_ROOT_PASSWORD: 12345678
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+
+volumes:
+  mysql_data:
+
+
+==================================================
+FILE: ./uploads/challenges/test_valid.txt
+==================================================
+
+This is a valid challenge.
+
+==================================================
+FILE: ./uploads/challenges/bai tho.txt
+==================================================
+
+This is a poem content.
+
+==================================================
+FILE: ./uploads/challenges/test_simple.txt
+==================================================
+
+Test content
+
+==================================================
+FILE: ./src/main/webapp/users.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <meta charset="UTF-8">
+            <title>Users - Class Manager</title>
+            <link rel="stylesheet" href="css/style.css">
+        </head>
+
+        <body>
+            <div class="container">
+                <nav class="navbar">
+                    <div class="brand">
+                        <h2 onclick="location.href='home.jsp'" style="cursor:pointer">Class Manager</h2>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home.jsp">Dashboard</a>
+                        <a href="users" class="active" style="color: var(--primary-color);">Users</a>
+                        <a href="assignments">Assignments</a>
+                        <a href="challenges">Challenges</a>
+                    </div>
+                </nav>
+
+                <div class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1>User List</h1>
+                        <c:if test="${sessionScope.user.role == 'TEACHER'}">
+                            <a href="users?action=edit&id=0" class="btn" style="width: auto;">+ Add User</a>
+                        </c:if>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="u" items="${listUser}">
+                                <tr>
+                                    <td>${u.fullName}</td>
+                                    <td>
+                                        <span
+                                            style="padding: 4px 8px; background: ${u.role == 'TEACHER' ? '#e0e7ff' : '#f3f4f6'}; color: ${u.role == 'TEACHER' ? '#4f46e5' : '#374151'}; border-radius: 4px; font-size: 0.875rem; font-weight: 500;">
+                                            ${u.role}
+                                        </span>
+                                    </td>
+                                    <td>${u.email}</td>
+                                    <td>
+                                        <a href="users?action=view&id=${u.id}"
+                                            style="color: var(--primary-color); text-decoration: none; margin-right: 1rem;">View</a>
+                                        <c:if test="${sessionScope.user.role == 'TEACHER'}">
+                                            <a href="users?action=edit&id=${u.id}"
+                                                style="color: #6b7280; text-decoration: none; margin-right: 1rem;">Edit</a>
+                                            <a href="users?action=delete&id=${u.id}"
+                                                style="color: #ef4444; text-decoration: none;"
+                                                onclick="return confirm('Are you sure?')">Delete</a>
+                                        </c:if>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </body>
+
+        </html>
+
+==================================================
+FILE: ./src/main/webapp/submissions.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <title>Submissions - Class Manager</title>
+            <link rel="stylesheet" href="css/style.css">
+        </head>
+
+        <body>
+            <div class="container">
+                <nav class="navbar">
+                    <div class="brand">
+                        <h2 onclick="location.href='home.jsp'" style="cursor:pointer">Class Manager</h2>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home.jsp">Dashboard</a>
+                        <a href="users">Users</a>
+                        <a href="assignments" style="color: var(--primary-color);">Assignments</a>
+                        <a href="challenges">Challenges</a>
+                    </div>
+                </nav>
+
+                <div class="card">
+                    <h1>Submissions for: ${assignment.title}</h1>
+                    <p style="margin-bottom: 2rem; color: #6b7280;">Total: ${submissions.size()}</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Submitted At</th>
+                                <th>File</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="s" items="${submissions}">
+                                <tr>
+                                    <td>Student #${s.studentId}</td>
+                                    <td>${s.submittedAt}</td>
+                                    <td>
+                                        <a href="assignments?action=download&type=submissions&file=${s.filePath}"
+                                            class="btn" style="width: auto; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                            Download Work
+                                        </a>
+                                    </td>
+                                </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 2rem;">
+                        <a href="assignments" style="color: var(--primary-color); text-decoration: none;">&larr; Back to
+                            Assignments</a>
+                    </div>
+                </div>
+            </div>
+        </body>
+
+        </html>
+
+==================================================
+FILE: ./src/main/webapp/user-form.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <title>${userItem != null ? 'Edit User' : 'New User'} - Class Manager</title>
+            <link rel="stylesheet" href="css/style.css">
+        </head>
+
+        <body>
+            <div class="container">
+                <nav class="navbar">
+                    <div class="brand">
+                        <h2 onclick="location.href='home.jsp'" style="cursor:pointer">Class Manager</h2>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home.jsp">Dashboard</a>
+                        <a href="users" style="color: var(--primary-color);">Users</a>
+                        <a href="assignments">Assignments</a>
+                        <a href="challenges">Challenges</a>
+                    </div>
+                </nav>
+
+                <div class="card" style="max-width: 500px; margin: 0 auto;">
+                    <h1>${userItem != null ? 'Edit User' : 'New User'}</h1>
+
+                    <form action="users" method="post">
+                        <input type="hidden" name="action" value="${userItem != null ? 'update' : 'create'}">
+                        <c:if test="${userItem != null}">
+                            <input type="hidden" name="id" value="${userItem.id}">
+                        </c:if>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label>Full Name</label>
+                            <input type="text" name="fullName" value="${userItem.fullName}" required>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label>Email</label>
+                            <input type="email" name="email" value="${userItem.email}">
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label>Phone</label>
+                            <input type="text" name="phone" value="${userItem.phone}">
+                        </div>
+
+                        <%-- Readonly fields for student when editing self --%>
+                            <c:choose>
+                                <c:when test="${userItem == null || sessionScope.user.role == 'TEACHER'}">
+                                    <div style="margin-bottom: 1rem;">
+                                        <label>Username</label>
+                                        <%-- Username readonly on edit --%>
+                                            <input type="text" name="username" value="${userItem.username}" ${userItem
+                                                !=null ? 'readonly' : '' } required>
+                                    </div>
+                                    <c:if test="${userItem == null}">
+                                        <div style="margin-bottom: 1rem;">
+                                            <label>Password</label>
+                                            <input type="password" name="password" required>
+                                        </div>
+                                    </c:if>
+                                    <div style="margin-bottom: 1rem;">
+                                        <label>Role</label>
+                                        <select name="role" ${userItem !=null ? 'disabled' : '' }>
+                                            <option value="STUDENT" ${userItem.role=='STUDENT' ? 'selected' : '' }>
+                                                Student</option>
+                                            <option value="TEACHER" ${userItem.role=='TEACHER' ? 'selected' : '' }>
+                                                Teacher</option>
+                                        </select>
+                                        <c:if test="${userItem != null}">
+                                            <input type="hidden" name="role" value="${userItem.role}">
+                                        </c:if>
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <%-- Student Self Edit --%>
+                                        <input type="hidden" name="role" value="${userItem.role}">
+                                </c:otherwise>
+                            </c:choose>
+
+                            <button type="submit" class="btn">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </body>
+
+        </html>
+
+==================================================
+FILE: ./src/main/webapp/login.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Class Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="login-card card">
+        <h1>Welcome Back</h1>
+        <p style="color: #6b7280; margin-bottom: 2rem;">Sign in to your account</p>
+        
+        <% 
+            String error = (String) request.getAttribute("error");
+            if (error != null) { 
+        %>
+            <div class="error-msg"><%= error %></div>
+        <% } %>
+
+        <form action="auth" method="post">
+            <input type="hidden" name="action" value="login">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="btn">Sign In</button>
+        </form>
+    </div>
+</body>
+</html>
+
+
+==================================================
+FILE: ./src/main/webapp/index.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <% response.sendRedirect("login.jsp"); %>
+
+==================================================
+FILE: ./src/main/webapp/assignments.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <title>Assignments - Class Manager</title>
+            <link rel="stylesheet" href="css/style.css">
+        </head>
+
+        <body>
+            <div class="container">
+                <nav class="navbar">
+                    <div class="brand">
+                        <h2 onclick="location.href='home.jsp'" style="cursor:pointer">Class Manager</h2>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home.jsp">Dashboard</a>
+                        <a href="users">Users</a>
+                        <a href="assignments" style="color: var(--primary-color);">Assignments</a>
+                        <a href="challenges">Challenges</a>
+                    </div>
+                </nav>
+
+                <c:if test="${sessionScope.user.role == 'TEACHER'}">
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <h2>Create New Assignment</h2>
+                        <form action="assignments" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="create">
+                            <input type="text" name="title" placeholder="Assignment Title" required>
+                            <textarea name="description" placeholder="Description" rows="3"></textarea>
+                            <div style="margin-bottom: 1rem;">
+                                <label>Attach File</label>
+                                <input type="file" name="file" style="border: none; padding-left: 0;">
+                            </div>
+                            <button type="submit" class="btn">Upload Assignment</button>
+                        </form>
+                    </div>
+                </c:if>
+
+                <div class="card">
+                    <h1>All Assignments</h1>
+                    <div style="display: grid; gap: 1.5rem; margin-top: 1.5rem;">
+                        <c:forEach var="a" items="${assignments}">
+                            <div class="card" style="box-shadow: none; border: 1px solid #e5e7eb; padding: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <h3 style="margin-bottom: 0.5rem;">${a.title}</h3>
+                                        <p style="color: #6b7280; margin-bottom: 0.5rem;">${a.description}</p>
+                                        <c:if test="${a.filePath != null}">
+                                            <a href="assignments?action=download&type=assignments&file=${a.filePath}"
+                                                style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem;">
+                                                Download Attachment
+                                            </a>
+                                        </c:if>
+                                    </div>
+                                    <c:if test="${sessionScope.user.role == 'TEACHER'}">
+                                        <a href="assignments?action=view_submissions&id=${a.id}" class="btn"
+                                            style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem;">View
+                                            Submissions</a>
+                                    </c:if>
+                                </div>
+
+                                <c:if test="${sessionScope.user.role == 'STUDENT'}">
+                                    <div style="margin-top: 1.5rem; border-top: 1px dashed #e5e7eb; padding-top: 1rem;">
+                                        <h4 style="margin-bottom: 0.5rem; font-size: 1rem;">Submit Your Work</h4>
+                                        <form action="assignments" method="post" enctype="multipart/form-data"
+                                            style="display: flex; gap: 1rem; align-items: center;">
+                                            <input type="hidden" name="action" value="submit">
+                                            <input type="hidden" name="assignmentId" value="${a.id}">
+                                            <input type="file" name="file" required
+                                                style="margin-bottom: 0; width: auto; flex-grow: 1;">
+                                            <button type="submit" class="btn" style="width: auto;">Submit</button>
+                                        </form>
+                                    </div>
+                                </c:if>
+                            </div>
+                        </c:forEach>
+                        <c:if test="${empty assignments}">
+                            <p style="text-align: center; color: #6b7280;">No assignments available.</p>
+                        </c:if>
+                    </div>
+                </div>
+            </div>
+        </body>
+
+        </html>
+
+==================================================
+FILE: ./src/main/webapp/challenges.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <title>Challenges - Class Manager</title>
+            <link rel="stylesheet" href="css/style.css">
+        </head>
+
+        <body>
+            <div class="container">
+                <nav class="navbar">
+                    <div class="brand">
+                        <h2 onclick="location.href='home.jsp'" style="cursor:pointer">Class Manager</h2>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home.jsp">Dashboard</a>
+                        <a href="users">Users</a>
+                        <a href="assignments">Assignments</a>
+                        <a href="challenges" style="color: var(--primary-color);">Challenges</a>
+                    </div>
+                </nav>
+
+                <c:if test="${sessionScope.user.role == 'TEACHER'}">
+                    <div class="card" style="margin-bottom: 2rem;">
+                        <h2>Create New Challenge</h2>
+                        <form action="challenges" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="create">
+                            <div style="margin-bottom: 1rem;">
+                                <input type="text" name="hint" placeholder="Hint (e.g., Book Title, context...)"
+                                    required>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label>Upload Text File (The filename will be the answer)</label>
+                                <input type="file" name="file" accept=".txt" required
+                                    style="border: none; padding-left: 0;">
+                            </div>
+                            <button type="submit" class="btn">Create Challenge</button>
+                        </form>
+                    </div>
+                </c:if>
+
+                <div class="card">
+                    <h1>Challenges</h1>
+
+                    <%-- Result Display --%>
+                        <c:if test="${not empty success}">
+                            <div
+                                style="background: #ecfdf5; color: #065f46; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #a7f3d0;">
+                                <h3>Correct! Here is the content:</h3>
+                                <pre
+                                    style="white-space: pre-wrap; margin-top: 1rem; font-family: monospace; background: white; padding: 1rem; border-radius: 4px;">${content}</pre>
+                            </div>
+                        </c:if>
+                        <c:if test="${not empty error}">
+                            <div class="error-msg">${error}</div>
+                        </c:if>
+
+                        <div style="display: grid; gap: 1.5rem; margin-top: 1.5rem;">
+                            <c:forEach var="c" items="${challenges}">
+                                <div class="card" style="box-shadow: none; border: 1px solid #e5e7eb; padding: 1.5rem;">
+                                    <h3 style="margin-bottom: 0.5rem;">Hint: ${c.hint}</h3>
+                                    <p style="color: #6b7280; font-size: 0.875rem;">Created at: ${c.createdAt}</p>
+
+                                    <c:if test="${sessionScope.user.role == 'STUDENT'}">
+                                        <form action="challenges" method="post"
+                                            style="margin-top: 1rem; display: flex; gap: 1rem;">
+                                            <input type="hidden" name="action" value="solve">
+                                            <input type="text" name="answer" placeholder="Enter answer..." required
+                                                style="margin-bottom: 0; flex-grow: 1;">
+                                            <button type="submit" class="btn" style="width: auto;">Submit
+                                                Answer</button>
+                                        </form>
+                                    </c:if>
+                                </div>
+                            </c:forEach>
+                            <c:if test="${empty challenges}">
+                                <p style="text-align: center; color: #6b7280;">No challenges available.</p>
+                            </c:if>
+                        </div>
+                </div>
+            </div>
+        </body>
+
+        </html>
+
+==================================================
+FILE: ./src/main/webapp/home.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <%@ page import="org.example.classmanager.model.User" %>
+            <% User user=(User) session.getAttribute("user"); if (user==null) { response.sendRedirect("login.jsp");
+                return; } %>
+                <!DOCTYPE html>
+                <html>
+
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Dashboard - Class Manager</title>
+                    <link rel="stylesheet" href="css/style.css">
+                </head>
+
+                <body>
+                    <div class="container">
+                        <nav class="navbar">
+                            <div class="brand">
+                                <h2>Class Manager</h2>
+                            </div>
+                            <div class="nav-links">
+                                <a href="home.jsp">Dashboard</a>
+                                <a href="users">Users</a>
+                                <a href="assignments">Assignments</a>
+                                <a href="challenges">Challenges</a>
+                                <span style="border-left: 2px solid #ddd; margin-left: 1rem; padding-left: 1rem;">
+                                    Hello, <%= user.getFullName() %>
+                                </span>
+                                <form action="auth" method="post" style="display: inline;">
+                                    <input type="hidden" name="action" value="logout">
+                                    <button type="submit"
+                                        style="background: none; border: none; color: #ef4444; cursor: pointer; margin-left: 1rem; font-weight: 500;">Logout</button>
+                                </form>
+                            </div>
+                        </nav>
+
+                        <div class="card">
+                            <h1>Welcome, <%= user.getRole() %>
+                                    <%= user.getFullName() %>
+                            </h1>
+                            <p style="margin-top: 1rem; color: var(--text-muted);">
+                                Select a section from the navigation bar to get started.
+                            </p>
+
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                                <div class="card"
+                                    style="box-shadow: none; border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                                    <div>
+                                        <h3>Users</h3>
+                                        <p>View classmates and teachers.</p>
+                                    </div>
+                                    <a href="users" class="btn" style="margin-top: 1rem;">View Users</a>
+                                </div>
+                                <div class="card"
+                                    style="box-shadow: none; border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                                    <div>
+                                        <h3>Assignments</h3>
+                                        <p>Manage assignments and submissions.</p>
+                                    </div>
+                                    <a href="assignments" class="btn" style="margin-top: 1rem;">View Assignments</a>
+                                </div>
+                                <div class="card"
+                                    style="box-shadow: none; border: 1px solid #e5e7eb; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                                    <div>
+                                        <h3>Challenges</h3>
+                                        <p>Solve puzzles and earn recognition.</p>
+                                    </div>
+                                    <a href="challenges" class="btn" style="margin-top: 1rem;">Play Challenges</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+
+                </html>
+
+==================================================
+FILE: ./src/main/webapp/user-detail.jsp
+==================================================
+
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+    <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <title>${userItem.fullName} - Class Manager</title>
+            <link rel="stylesheet" href="css/style.css">
+        </head>
+
+        <body>
+            <div class="container">
+                <nav class="navbar">
+                    <div class="brand">
+                        <h2 onclick="location.href='home.jsp'" style="cursor:pointer">Class Manager</h2>
+                    </div>
+                    <div class="nav-links">
+                        <a href="home.jsp">Dashboard</a>
+                        <a href="users" style="color: var(--primary-color);">Users</a>
+                        <a href="assignments">Assignments</a>
+                        <a href="challenges">Challenges</a>
+                    </div>
+                </nav>
+
+                <div class="card" style="max-width: 600px; margin: 0 auto;">
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <div
+                            style="width: 80px; height: 80px; background: #e0e7ff; color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; margin: 0 auto 1rem;">
+                            ${userItem.fullName.charAt(0)}
+                        </div>
+                        <h1>${userItem.fullName}</h1>
+                        <p style="color: #6b7280;">${userItem.role}</p>
+                    </div>
+
+                    <div style="display: grid; gap: 1rem;">
+                        <div>
+                            <label style="color: #6b7280; font-size: 0.875rem;">Email</label>
+                            <p style="font-weight: 500;">${userItem.email}</p>
+                        </div>
+                        <div>
+                            <label style="color: #6b7280; font-size: 0.875rem;">Phone</label>
+                            <p style="font-weight: 500;">${userItem.phone}</p>
+                        </div>
+                        <div>
+                            <label style="color: #6b7280; font-size: 0.875rem;">Username</label>
+                            <p style="font-weight: 500;">${userItem.username}</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
+                        <c:if test="${sessionScope.user.role == 'TEACHER' || sessionScope.user.id == userItem.id}">
+                            <a href="users?action=edit&id=${userItem.id}" class="btn">Edit Profile</a>
+                        </c:if>
+                    </div>
+                </div>
+            </div>
+        </body>
+
+        </html>
+
+==================================================
+FILE: ./src/main/webapp/WEB-INF/web.xml
+==================================================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+</web-app>
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/HelloServlet.java
+==================================================
+
+package org.example.classmanager;
+
+import java.io.*;
+
+import jakarta.servlet.http.*;
+import jakarta.servlet.annotation.*;
+
+@WebServlet(name = "helloServlet", value = "/hello-servlet")
+public class HelloServlet extends HttpServlet {
+    private String message;
+
+    public void init() {
+        message = "Hello World!";
+    }
+
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("text/html");
+
+        // Hello
+        PrintWriter out = response.getWriter();
+        out.println("<html><body>");
+        out.println("<h1>" + message + "</h1>");
+        out.println("</body></html>");
+    }
+
+    public void destroy() {
+    }
+}
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/util/PasswordUtil.java
+==================================================
+
+package org.example.classmanager.util;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
+public class PasswordUtil {
+    public static String hashPassword(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashedPassword = md.digest(password.getBytes());
+            return Base64.getEncoder().encodeToString(hashedPassword);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error hashing password", e);
+        }
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/util/FileUtil.java
+==================================================
+
+package org.example.classmanager.util;
+
+import jakarta.servlet.http.Part;
+
+import java.text.Normalizer;
+import java.util.regex.Pattern;
+
+public class FileUtil {
+
+    public static String getFileName(Part part) {
+        for (String content : part.getHeader("content-disposition").split(";")) {
+            if (content.trim().startsWith("filename")) {
+                return content.substring(content.indexOf("=") + 2, content.length() - 1);
+            }
+        }
+        return "unknown";
+    }
+
+    public static String removeAccents(String s) {
+        if (s == null)
+            return null;
+        String temp = Normalizer.normalize(s, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        return pattern.matcher(temp).replaceAll("").replace('đ', 'd').replace('Đ', 'D');
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/util/DBConnection.java
+==================================================
+
+package org.example.classmanager.util;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DBConnection {
+    private static final String URL = (System.getenv("DB_URL") != null ? System.getenv("DB_URL")
+            : "jdbc:mysql://localhost:3306/Quanlyclass") + "?useUnicode=true&characterEncoding=UTF-8";
+    private static final String USER = System.getenv("DB_USER") != null ? System.getenv("DB_USER") : "root";
+    private static final String PASSWORD = System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD")
+            : "12345678";
+
+    static {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error loading MySQL Driver", e);
+        }
+    }
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/dao/UserDAO.java
+==================================================
+
+package org.example.classmanager.dao;
+
+import org.example.classmanager.model.User;
+import org.example.classmanager.util.DBConnection;
+import org.example.classmanager.util.PasswordUtil;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class UserDAO {
+
+    public User findByUsername(String username) {
+        String query = "SELECT * FROM users WHERE username = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapUser(rs);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public User findById(Long id) {
+        String query = "SELECT * FROM users WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapUser(rs);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<User> findAll() {
+        List<User> users = new ArrayList<>();
+        String query = "SELECT * FROM users";
+        try (Connection conn = DBConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                users.add(mapUser(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return users;
+    }
+
+    public void save(User user) {
+        String query = "INSERT INTO users (username, password, full_name, email, phone, role) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, user.getUsername());
+            stmt.setString(2, PasswordUtil.hashPassword(user.getPassword()));
+            stmt.setString(3, user.getFullName());
+            stmt.setString(4, user.getEmail());
+            stmt.setString(5, user.getPhone());
+            stmt.setString(6, user.getRole().name());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void update(User user) {
+        // Only update basic info, password update should be separate or handled with
+        // care if field is empty
+        String query = "UPDATE users SET full_name = ?, email = ?, phone = ? WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, user.getFullName());
+            stmt.setString(2, user.getEmail());
+            stmt.setString(3, user.getPhone());
+            stmt.setLong(4, user.getId());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void delete(Long id) {
+        String query = "DELETE FROM users WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public User checkLogin(String username, String password) {
+        User user = findByUsername(username);
+        if (user != null && user.getPassword().equals(PasswordUtil.hashPassword(password))) {
+            return user;
+        }
+        // Fallback for plain text password (for initial seed data or migration)
+        if (user != null && user.getPassword().equals(password)) {
+            return user;
+        }
+        return null;
+    }
+
+    private User mapUser(ResultSet rs) throws SQLException {
+        return new User(
+                rs.getLong("id"),
+                rs.getString("username"),
+                rs.getString("password"),
+                rs.getString("full_name"),
+                rs.getString("email"),
+                rs.getString("phone"),
+                User.Role.valueOf(rs.getString("role")));
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/dao/ChallengeDAO.java
+==================================================
+
+package org.example.classmanager.dao;
+
+import org.example.classmanager.model.Challenge;
+import org.example.classmanager.util.DBConnection;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ChallengeDAO {
+
+    public void createChallenge(Challenge challenge) {
+        String query = "INSERT INTO challenges (hint, file_path) VALUES (?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, challenge.getHint());
+            stmt.setString(2, challenge.getFilePath());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Challenge> findAll() {
+        List<Challenge> list = new ArrayList<>();
+        String query = "SELECT * FROM challenges ORDER BY created_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                list.add(new Challenge(
+                        rs.getLong("id"),
+                        rs.getString("hint"),
+                        rs.getString("file_path"),
+                        rs.getTimestamp("created_at")));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/dao/AssignmentDAO.java
+==================================================
+
+package org.example.classmanager.dao;
+
+import org.example.classmanager.model.Assignment;
+import org.example.classmanager.model.Submission;
+import org.example.classmanager.util.DBConnection;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class AssignmentDAO {
+
+    public void createAssignment(Assignment assignment) {
+        String query = "INSERT INTO assignments (title, description, file_path, teacher_id) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, assignment.getTitle());
+            stmt.setString(2, assignment.getDescription());
+            stmt.setString(3, assignment.getFilePath());
+            stmt.setLong(4, assignment.getTeacherId());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Assignment> findAll() {
+        List<Assignment> list = new ArrayList<>();
+        String query = "SELECT * FROM assignments ORDER BY created_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                list.add(mapAssignment(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public Assignment findById(Long id) {
+        String query = "SELECT * FROM assignments WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapAssignment(rs);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // Submission Methods
+
+    public void submitAssignment(Submission submission) {
+        String query = "INSERT INTO submissions (assignment_id, student_id, file_path) VALUES (?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, submission.getAssignmentId());
+            stmt.setLong(2, submission.getStudentId());
+            stmt.setString(3, submission.getFilePath());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Submission> findSubmissionsByAssignmentId(Long assignmentId) {
+        List<Submission> list = new ArrayList<>();
+        String query = "SELECT * FROM submissions WHERE assignment_id = ? ORDER BY submitted_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setLong(1, assignmentId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(mapSubmission(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    private Assignment mapAssignment(ResultSet rs) throws SQLException {
+        return new Assignment(
+                rs.getLong("id"),
+                rs.getString("title"),
+                rs.getString("description"),
+                rs.getString("file_path"),
+                rs.getLong("teacher_id"),
+                rs.getTimestamp("created_at"));
+    }
+
+    private Submission mapSubmission(ResultSet rs) throws SQLException {
+        return new Submission(
+                rs.getLong("id"),
+                rs.getLong("assignment_id"),
+                rs.getLong("student_id"),
+                rs.getString("file_path"),
+                rs.getTimestamp("submitted_at"));
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/controller/AssignmentServlet.java
+==================================================
+
+package org.example.classmanager.controller;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
+import org.example.classmanager.dao.AssignmentDAO;
+import org.example.classmanager.model.Assignment;
+import org.example.classmanager.model.Submission;
+import org.example.classmanager.model.User;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.UUID;
+
+@WebServlet("/assignments")
+@MultipartConfig(fileSizeThreshold = 1024 * 1024 * 1, // 1 MB
+        maxFileSize = 1024 * 1024 * 10, // 10 MB
+        maxRequestSize = 1024 * 1024 * 100 // 100 MB
+)
+public class AssignmentServlet extends HttpServlet {
+    private AssignmentDAO assignmentDAO = new AssignmentDAO();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if (action == null) {
+            listAssignments(req, resp);
+        } else if ("view_submissions".equals(action)) {
+            viewSubmissions(req, resp);
+        } else if ("download".equals(action)) {
+            downloadFile(req, resp);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if ("create".equals(action)) {
+            createAssignment(req, resp);
+        } else if ("submit".equals(action)) {
+            submitAssignment(req, resp);
+        }
+    }
+
+    private void listAssignments(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        List<Assignment> assignments = assignmentDAO.findAll();
+        req.setAttribute("assignments", assignments);
+        req.getRequestDispatcher("assignments.jsp").forward(req, resp);
+    }
+
+    private void createAssignment(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.TEACHER) {
+            resp.sendRedirect("assignments");
+            return;
+        }
+
+        String title = req.getParameter("title");
+        String description = req.getParameter("description");
+        Part filePart = req.getPart("file");
+
+        String fileName = null;
+        if (filePart != null && filePart.getSize() > 0) {
+            fileName = saveFile(filePart, "assignments");
+        }
+
+        Assignment assignment = new Assignment();
+        assignment.setTitle(title);
+        assignment.setDescription(description);
+        assignment.setFilePath(fileName);
+        assignment.setTeacherId(user.getId());
+
+        assignmentDAO.createAssignment(assignment);
+        resp.sendRedirect("assignments");
+    }
+
+    private void submitAssignment(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.STUDENT) {
+            resp.sendRedirect("assignments");
+            return;
+        }
+
+        Long assignmentId = Long.parseLong(req.getParameter("assignmentId"));
+        Part filePart = req.getPart("file");
+
+        String fileName = null;
+        if (filePart != null && filePart.getSize() > 0) {
+            fileName = saveFile(filePart, "submissions");
+        }
+
+        Submission submission = new Submission();
+        submission.setAssignmentId(assignmentId);
+        submission.setStudentId(user.getId());
+        submission.setFilePath(fileName);
+
+        assignmentDAO.submitAssignment(submission);
+        resp.sendRedirect("assignments");
+    }
+
+    private void viewSubmissions(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.TEACHER) {
+            resp.sendRedirect("assignments");
+            return;
+        }
+
+        Long assignmentId = Long.parseLong(req.getParameter("id"));
+        Assignment assignment = assignmentDAO.findById(assignmentId);
+        List<Submission> submissions = assignmentDAO.findSubmissionsByAssignmentId(assignmentId);
+
+        req.setAttribute("assignment", assignment);
+        req.setAttribute("submissions", submissions);
+        req.getRequestDispatcher("submissions.jsp").forward(req, resp);
+    }
+
+    private String saveFile(Part filePart, String subDir) throws IOException {
+        String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator + subDir;
+        File uploadDir = new File(uploadPath);
+        if (!uploadDir.exists())
+            uploadDir.mkdirs();
+
+        String fileName = UUID.randomUUID().toString() + "_" + getFileName(filePart);
+        filePart.write(uploadPath + File.separator + fileName);
+        return fileName;
+    }
+
+    private String getFileName(Part part) {
+        for (String content : part.getHeader("content-disposition").split(";")) {
+            if (content.trim().startsWith("filename")) {
+                return content.substring(content.indexOf("=") + 2, content.length() - 1);
+            }
+        }
+        return "unknown";
+    }
+
+    private void downloadFile(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String type = req.getParameter("type"); // assignments or submissions
+        String fileName = req.getParameter("file");
+
+        if (fileName == null || fileName.isEmpty())
+            return;
+
+        // Security Fix: Prevent path traversal
+        // 1. Sanitize the filename to remove directory components
+        String keyName = Paths.get(fileName).getFileName().toString();
+
+        // 2. Resolve paths and verify containment
+        String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator + type;
+        File uploadDir = new File(uploadPath);
+        File file = new File(uploadDir, keyName);
+
+        // Verify that the file is actually inside the uploadDir
+        if (!file.getCanonicalPath().startsWith(uploadDir.getCanonicalPath())) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid file path");
+            return;
+        }
+
+        if (file.exists()) {
+            resp.setContentType("application/octet-stream");
+            resp.setHeader("Content-Disposition", "attachment; filename=\"" + keyName + "\"");
+            Files.copy(file.toPath(), resp.getOutputStream());
+        } else {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+        }
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/controller/ChallengeServlet.java
+==================================================
+
+package org.example.classmanager.controller;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
+import org.example.classmanager.dao.ChallengeDAO;
+import org.example.classmanager.model.Challenge;
+import org.example.classmanager.model.User;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+@WebServlet("/challenges")
+@MultipartConfig
+public class ChallengeServlet extends HttpServlet {
+    private ChallengeDAO challengeDAO = new ChallengeDAO();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if (action == null) {
+            listChallenges(req, resp);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if ("create".equals(action)) {
+            createChallenge(req, resp);
+        } else if ("solve".equals(action)) {
+            solveChallenge(req, resp);
+        }
+    }
+
+    private void listChallenges(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        List<Challenge> challenges = challengeDAO.findAll();
+        req.setAttribute("challenges", challenges);
+        req.getRequestDispatcher("challenges.jsp").forward(req, resp);
+    }
+
+    private void createChallenge(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.TEACHER) {
+            resp.sendRedirect("challenges");
+            return;
+        }
+
+        String hint = req.getParameter("hint");
+        Part filePart = req.getPart("file");
+
+        if (filePart != null && filePart.getSize() > 0) {
+            String originalName = org.example.classmanager.util.FileUtil.getFileName(filePart);
+
+            // STRICT RULE: Only allow .txt files
+            if (!originalName.toLowerCase().endsWith(".txt")) {
+                req.setAttribute("error", "Only .txt files are allowed!");
+                listChallenges(req, resp); // Return to list with error
+                return;
+            }
+
+            // Normalize filename: No accents + Lowercase
+            String nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.'));
+            String normalizedName = org.example.classmanager.util.FileUtil.removeAccents(nameWithoutExt).toLowerCase()
+                    .trim().replaceAll("\\s+", " ");
+            String savedFileName = normalizedName + ".txt";
+
+            saveFile(filePart, savedFileName);
+
+            Challenge challenge = new Challenge();
+            challenge.setHint(hint);
+            challenge.setFilePath(savedFileName);
+            challengeDAO.createChallenge(challenge);
+        }
+        resp.sendRedirect("challenges");
+    }
+
+    private void solveChallenge(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        // STRICT RULE: Only STUDENT can solve
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.STUDENT) {
+            resp.sendRedirect("challenges");
+            return;
+        }
+
+        String answer = req.getParameter("answer");
+        if (answer != null) {
+            // STRICT RULE: Normalize answer same as filename
+            String normalizedAnswer = org.example.classmanager.util.FileUtil.removeAccents(answer).toLowerCase().trim()
+                    .replaceAll("\\s+", " ");
+
+            // Security Fix: Prevent path traversal by using just the basename
+            String safeAnswer = Paths.get(normalizedAnswer).getFileName().toString();
+            String filename = safeAnswer + ".txt";
+
+            String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator
+                    + "challenges";
+            File uploadDir = new File(uploadPath);
+            File file = new File(uploadDir, filename);
+
+            // Strong verification of path containment
+            if (!file.getCanonicalPath().startsWith(uploadDir.getCanonicalPath())) {
+                req.setAttribute("error", "Invalid path!");
+                listChallenges(req, resp);
+                return;
+            }
+
+            if (file.exists()) {
+                // Return content
+                String content = Files.readString(file.toPath());
+                req.setAttribute("success", true);
+                req.setAttribute("content", content);
+                req.setAttribute("answer", answer);
+            } else {
+                req.setAttribute("error", "Incorrect answer!");
+            }
+        }
+        listChallenges(req, resp);
+    }
+
+    private void saveFile(Part filePart, String fileName) throws IOException {
+        String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator
+                + "challenges";
+        File uploadDir = new File(uploadPath);
+        if (!uploadDir.exists())
+            uploadDir.mkdirs();
+        filePart.write(uploadPath + File.separator + fileName);
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/controller/EncodingFilter.java
+==================================================
+
+package org.example.classmanager.controller;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import java.io.IOException;
+
+@WebFilter("/*")
+public class EncodingFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        chain.doFilter(request, response);
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/controller/UserServlet.java
+==================================================
+
+package org.example.classmanager.controller;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.example.classmanager.dao.UserDAO;
+import org.example.classmanager.model.User;
+
+import java.io.IOException;
+import java.util.List;
+
+@WebServlet("/users")
+public class UserServlet extends HttpServlet {
+    private UserDAO userDAO = new UserDAO();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if (action == null) {
+            listUsers(req, resp);
+        } else if ("view".equals(action)) {
+            viewUser(req, resp);
+        } else if ("edit".equals(action)) {
+            showEditForm(req, resp);
+        } else if ("delete".equals(action)) {
+            deleteUser(req, resp);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if ("create".equals(action)) {
+            createUser(req, resp);
+        } else if ("update".equals(action)) {
+            updateUser(req, resp);
+        }
+    }
+
+    private void listUsers(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        List<User> listUser = userDAO.findAll();
+        req.setAttribute("listUser", listUser);
+        req.getRequestDispatcher("users.jsp").forward(req, resp);
+    }
+
+    private void viewUser(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        Long id = Long.parseLong(req.getParameter("id"));
+        User user = userDAO.findById(id);
+        req.setAttribute("userItem", user); // 'userItem' to distinguish from session 'user'
+        req.getRequestDispatcher("user-detail.jsp").forward(req, resp);
+    }
+
+    private void showEditForm(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        // Only teacher or self can edit
+        Long id = Long.parseLong(req.getParameter("id"));
+        User user = userDAO.findById(id);
+        req.setAttribute("userItem", user);
+        req.getRequestDispatcher("user-form.jsp").forward(req, resp);
+    }
+
+    private void createUser(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        // Check permission: Only Teacher
+        User currentUser = (User) req.getSession().getAttribute("user");
+        if (currentUser.getRole() != User.Role.TEACHER) {
+            resp.sendRedirect("users");
+            return;
+        }
+
+        User newUser = new User();
+        newUser.setUsername(req.getParameter("username"));
+        newUser.setPassword(req.getParameter("password"));
+        newUser.setFullName(req.getParameter("fullName"));
+        newUser.setEmail(req.getParameter("email"));
+        newUser.setPhone(req.getParameter("phone"));
+        newUser.setRole(User.Role.valueOf(req.getParameter("role")));
+
+        userDAO.save(newUser);
+        resp.sendRedirect("users");
+    }
+
+    private void updateUser(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        Long id = Long.parseLong(req.getParameter("id"));
+        User existingUser = userDAO.findById(id);
+
+        // Permission check inside DAO or Controller logic? Controller is better.
+        // Teacher can edit anyone. Student can edit self.
+        User currentUser = (User) req.getSession().getAttribute("user");
+
+        if (currentUser.getRole() == User.Role.STUDENT && !currentUser.getId().equals(id)) {
+            resp.sendRedirect("users");
+            return; // Unauthorized
+        }
+
+        // Apply changes
+        existingUser.setFullName(req.getParameter("fullName"));
+        existingUser.setEmail(req.getParameter("email"));
+        existingUser.setPhone(req.getParameter("phone"));
+        // Student cannot change role or username, teacher can (here I assume keeping
+        // username/role separate or simplified)
+
+        userDAO.update(existingUser);
+        resp.sendRedirect("users?action=view&id=" + id);
+    }
+
+    private void deleteUser(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        User currentUser = (User) req.getSession().getAttribute("user");
+        if (currentUser.getRole() != User.Role.TEACHER) {
+            resp.sendRedirect("users");
+            return;
+        }
+        Long id = Long.parseLong(req.getParameter("id"));
+        userDAO.delete(id);
+        resp.sendRedirect("users");
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/controller/AuthServlet.java
+==================================================
+
+package org.example.classmanager.controller;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.example.classmanager.dao.UserDAO;
+import org.example.classmanager.model.User;
+
+import java.io.IOException;
+
+@WebServlet("/auth")
+public class AuthServlet extends HttpServlet {
+    private UserDAO userDAO = new UserDAO();
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+        if ("login".equals(action)) {
+            handleLogin(req, resp);
+        } else if ("logout".equals(action)) {
+            handleLogout(req, resp);
+        }
+    }
+
+    private void handleLogin(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+        String username = req.getParameter("username");
+        String password = req.getParameter("password");
+
+        User user = userDAO.checkLogin(username, password);
+        if (user != null) {
+            HttpSession session = req.getSession();
+            session.setAttribute("user", user);
+            resp.sendRedirect("home.jsp");
+        } else {
+            req.setAttribute("error", "Invalid username or password");
+            req.getRequestDispatcher("login.jsp").forward(req, resp);
+        }
+    }
+
+    private void handleLogout(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        HttpSession session = req.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        resp.sendRedirect("login.jsp");
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/controller/AuthFilter.java
+==================================================
+
+package org.example.classmanager.controller;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
+import java.io.IOException;
+
+@WebFilter("/*")
+public class AuthFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        HttpServletRequest req = (HttpServletRequest) request;
+        HttpServletResponse res = (HttpServletResponse) response;
+        String path = req.getRequestURI().substring(req.getContextPath().length());
+
+        // Public pages
+        if (path.startsWith("/css") || path.startsWith("/js") || path.equals("/login.jsp") || path.equals("/auth")
+                || path.equals("/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        HttpSession session = req.getSession(false);
+        boolean loggedIn = (session != null && session.getAttribute("user") != null);
+
+        if (loggedIn) {
+            // Role check if needed, but for now just check login
+            chain.doFilter(request, response);
+        } else {
+            res.sendRedirect(req.getContextPath() + "/login.jsp");
+        }
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/model/Submission.java
+==================================================
+
+package org.example.classmanager.model;
+
+import java.sql.Timestamp;
+
+public class Submission {
+    private Long id;
+    private Long assignmentId;
+    private Long studentId;
+    private String filePath;
+    private Timestamp submittedAt;
+
+    public Submission() {
+    }
+
+    public Submission(Long id, Long assignmentId, Long studentId, String filePath, Timestamp submittedAt) {
+        this.id = id;
+        this.assignmentId = assignmentId;
+        this.studentId = studentId;
+        this.filePath = filePath;
+        this.submittedAt = submittedAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getAssignmentId() {
+        return assignmentId;
+    }
+
+    public void setAssignmentId(Long assignmentId) {
+        this.assignmentId = assignmentId;
+    }
+
+    public Long getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(Long studentId) {
+        this.studentId = studentId;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public Timestamp getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public void setSubmittedAt(Timestamp submittedAt) {
+        this.submittedAt = submittedAt;
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/model/User.java
+==================================================
+
+package org.example.classmanager.model;
+
+public class User {
+    private Long id;
+    private String username;
+    private String password;
+    private String fullName;
+    private String email;
+    private String phone;
+    private Role role;
+
+    public enum Role {
+        TEACHER, STUDENT
+    }
+
+    public User() {
+    }
+
+    public User(Long id, String username, String password, String fullName, String email, String phone, Role role) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.fullName = fullName;
+        this.email = email;
+        this.phone = phone;
+        this.role = role;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/model/Challenge.java
+==================================================
+
+package org.example.classmanager.model;
+
+import java.sql.Timestamp;
+
+public class Challenge {
+    private Long id;
+    private String hint;
+    private String filePath;
+    private Timestamp createdAt;
+
+    public Challenge() {
+    }
+
+    public Challenge(Long id, String hint, String filePath, Timestamp createdAt) {
+        this.id = id;
+        this.hint = hint;
+        this.filePath = filePath;
+        this.createdAt = createdAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getHint() {
+        return hint;
+    }
+
+    public void setHint(String hint) {
+        this.hint = hint;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+}
+
+
+==================================================
+FILE: ./src/main/java/org/example/classmanager/model/Assignment.java
+==================================================
+
+package org.example.classmanager.model;
+
+import java.sql.Timestamp;
+
+public class Assignment {
+    private Long id;
+    private String title;
+    private String description;
+    private String filePath;
+    private Long teacherId;
+    private Timestamp createdAt;
+
+    public Assignment() {
+    }
+
+    public Assignment(Long id, String title, String description, String filePath, Long teacherId, Timestamp createdAt) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.filePath = filePath;
+        this.teacherId = teacherId;
+        this.createdAt = createdAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public Long getTeacherId() {
+        return teacherId;
+    }
+
+    public void setTeacherId(Long teacherId) {
+        this.teacherId = teacherId;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+}
+

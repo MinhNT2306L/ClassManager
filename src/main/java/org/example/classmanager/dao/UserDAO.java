@@ -72,8 +72,6 @@ public class UserDAO {
     }
 
     public void update(User user) {
-        // Only update basic info, password update should be separate or handled with
-        // care if field is empty
         String query = "UPDATE users SET full_name = ?, email = ?, phone = ? WHERE id = ?";
         try (Connection conn = DBConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -103,7 +101,9 @@ public class UserDAO {
         if (user != null && user.getPassword().equals(PasswordUtil.hashPassword(password))) {
             return user;
         }
-        // Fallback for plain text password (for initial seed data or migration)
+        if (user != null && user.getPassword().equals(PasswordUtil.hashPassword(password))) {
+            return user;
+        }
         if (user != null && user.getPassword().equals(password)) {
             return user;
         }

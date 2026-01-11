@@ -48,12 +48,11 @@ public class UserServlet extends HttpServlet {
     private void viewUser(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         Long id = Long.parseLong(req.getParameter("id"));
         User user = userDAO.findById(id);
-        req.setAttribute("userItem", user); // 'userItem' to distinguish from session 'user'
+        req.setAttribute("userItem", user);
         req.getRequestDispatcher("user-detail.jsp").forward(req, resp);
     }
 
     private void showEditForm(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // Only teacher or self can edit
         Long id = Long.parseLong(req.getParameter("id"));
         User user = userDAO.findById(id);
         req.setAttribute("userItem", user);
@@ -61,7 +60,6 @@ public class UserServlet extends HttpServlet {
     }
 
     private void createUser(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        // Check permission: Only Teacher
         User currentUser = (User) req.getSession().getAttribute("user");
         if (currentUser.getRole() != User.Role.TEACHER) {
             resp.sendRedirect("users");
@@ -84,8 +82,6 @@ public class UserServlet extends HttpServlet {
         Long id = Long.parseLong(req.getParameter("id"));
         User existingUser = userDAO.findById(id);
 
-        // Permission check inside DAO or Controller logic? Controller is better.
-        // Teacher can edit anyone. Student can edit self.
         User currentUser = (User) req.getSession().getAttribute("user");
 
         if (currentUser.getRole() == User.Role.STUDENT && !currentUser.getId().equals(id)) {
@@ -97,8 +93,7 @@ public class UserServlet extends HttpServlet {
         existingUser.setFullName(req.getParameter("fullName"));
         existingUser.setEmail(req.getParameter("email"));
         existingUser.setPhone(req.getParameter("phone"));
-        // Student cannot change role or username, teacher can (here I assume keeping
-        // username/role separate or simplified)
+        existingUser.setPhone(req.getParameter("phone"));
 
         userDAO.update(existingUser);
         resp.sendRedirect("users?action=view&id=" + id);

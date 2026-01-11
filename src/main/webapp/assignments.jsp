@@ -59,6 +59,11 @@
                                             style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem;">View
                                             Submissions</a>
                                     </c:if>
+                                    <c:if test="${sessionScope.user.role == 'STUDENT'}">
+                                        <a href="assignments?action=view_my_submissions&id=${a.id}" class="btn"
+                                            style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem; background-color: #6b7280;">View
+                                            My Submissions</a>
+                                    </c:if>
                                 </div>
 
                                 <c:if test="${sessionScope.user.role == 'STUDENT'}">

@@ -16,9 +16,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.Normalizer;
 import java.util.List;
-import java.util.regex.Pattern;
+
+import java.util.UUID;
 
 @WebServlet("/challenges")
 @MultipartConfig
@@ -61,94 +61,105 @@ public class ChallengeServlet extends HttpServlet {
         Part filePart = req.getPart("file");
 
         if (filePart != null && filePart.getSize() > 0) {
-            String originalName = getFileName(filePart);
-            // Remove extension for normalization if needed, but we keep it or just
-            // normalize the name part
-            // Requirement: "Tên file được viết dưới định dạng không dấu và các từ cách nhau
-            // bởi 1 khoảng trắng"
-            // Example: "Chiếc Thuyền.txt" -> "chiec thuyen.txt" or just "chiec thuyen" as
-            // answer?
-            // "Đáp án chính là tên file mà giáo viên upload lên"
-            // Usually assumes the name *without extension* is the answer, or the full name.
-            // Let's assume name without extension is the answer to be typed.
+            String originalName = org.example.classmanager.util.FileUtil.getFileName(filePart);
 
-            String nameWithoutExt = originalName.contains(".")
-                    ? originalName.substring(0, originalName.lastIndexOf('.'))
-                    : originalName;
-            String ext = originalName.contains(".") ? originalName.substring(originalName.lastIndexOf('.')) : "";
+            if (!originalName.toLowerCase().endsWith(".txt")) {
+                req.setAttribute("error", "Only .txt files are allowed!");
+                listChallenges(req, resp);
+                return;
+            }
 
-            String normalizedName = removeAccents(nameWithoutExt).toLowerCase().trim().replaceAll("\\s+", " ");
-            String savedFileName = normalizedName + ext;
+            String nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.'));
+            String normalizedName = org.example.classmanager.util.FileUtil.removeAccents(nameWithoutExt).toLowerCase()
+                    .trim().replaceAll("\\s+", " ");
+            String savedFileName = normalizedName + ".txt";
 
-            saveFile(filePart, savedFileName);
+            String uuid = UUID.randomUUID().toString();
+            String relativePath = uuid + File.separator + savedFileName;
+
+            saveFile(filePart, uuid, savedFileName);
 
             Challenge challenge = new Challenge();
             challenge.setHint(hint);
-            challenge.setFilePath(savedFileName);
+            challenge.setFilePath(relativePath);
             challengeDAO.createChallenge(challenge);
         }
         resp.sendRedirect("challenges");
     }
 
     private void solveChallenge(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        User user = (User) req.getSession().getAttribute("user");
+        if (user.getRole() != User.Role.STUDENT) {
+            resp.sendRedirect("challenges");
+            return;
+        }
+
         String answer = req.getParameter("answer");
-        if (answer != null) {
-            String normalizedAnswer = removeAccents(answer).toLowerCase().trim().replaceAll("\\s+", " ");
-            // Check if file exists. We try common text extensions or just append .txt if
-            // implied
-            // The requirement says "upload lên 1 file txt". So we verify .txt
+        String idParam = req.getParameter("id");
 
-            // Security Fix: Prevent path traversal
-            // 1. Sanitize the answer to ensure it's just a filename component
-            String safeAnswer = Paths.get(normalizedAnswer).getFileName().toString();
-            String filename = safeAnswer + ".txt";
+        if (answer != null && idParam != null) {
+            try {
+                Long id = Long.parseLong(idParam);
+                Challenge challenge = challengeDAO.findById(id);
 
-            String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator
-                    + "challenges";
-            File uploadDir = new File(uploadPath);
-            File file = new File(uploadDir, filename);
+                if (challenge == null) {
+                    req.setAttribute("error", "Challenge not found!");
+                    listChallenges(req, resp);
+                    return;
+                }
 
-            // 2. Strong verification of path containment
-            if (!file.getCanonicalPath().startsWith(uploadDir.getCanonicalPath())) {
-                req.setAttribute("error", "Invalid path!");
-                listChallenges(req, resp);
-                return;
-            }
+                String normalizedAnswer = org.example.classmanager.util.FileUtil.removeAccents(answer).toLowerCase()
+                        .trim()
+                        .replaceAll("\\s+", " ");
 
-            if (file.exists()) {
-                // Return content
-                String content = Files.readString(file.toPath());
-                req.setAttribute("success", true);
-                req.setAttribute("content", content);
-                req.setAttribute("answer", answer);
-            } else {
-                req.setAttribute("error", "Incorrect answer!");
+                String safeAnswer = Paths.get(normalizedAnswer).getFileName().toString();
+                String submittedFilename = safeAnswer + ".txt";
+
+                Path storedPath = Paths.get(challenge.getFilePath());
+                String storedFilename = storedPath.getFileName().toString();
+
+                if (!submittedFilename.equals(storedFilename)) {
+                    req.setAttribute("error", "Incorrect answer!");
+                    listChallenges(req, resp);
+                    return;
+                }
+
+                String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator
+                        + "challenges";
+                File challengeFile = new File(uploadPath, challenge.getFilePath());
+
+                if (challengeFile.exists()) {
+                    long fileSize = Files.size(challengeFile.toPath());
+                    String content;
+                    if (fileSize > 10240) {
+                        byte[] bytes = new byte[2048];
+                        try (java.io.InputStream is = Files.newInputStream(challengeFile.toPath())) {
+                            int read = is.read(bytes);
+                            content = new String(bytes, 0, read) + "\n... (File is too large to display fully)";
+                        }
+                    } else {
+                        content = Files.readString(challengeFile.toPath());
+                    }
+
+                    req.setAttribute("success", true);
+                    req.setAttribute("content", content);
+                    req.setAttribute("answer", answer);
+                } else {
+                    req.setAttribute("error", "Challenge file missing on server!");
+                }
+            } catch (NumberFormatException e) {
+                req.setAttribute("error", "Invalid ID!");
             }
         }
         listChallenges(req, resp);
     }
 
-    private void saveFile(Part filePart, String fileName) throws IOException {
+    private void saveFile(Part filePart, String subDir, String fileName) throws IOException {
         String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads" + File.separator
-                + "challenges";
+                + "challenges" + File.separator + subDir;
         File uploadDir = new File(uploadPath);
         if (!uploadDir.exists())
             uploadDir.mkdirs();
         filePart.write(uploadPath + File.separator + fileName);
-    }
-
-    private String getFileName(Part part) {
-        for (String content : part.getHeader("content-disposition").split(";")) {
-            if (content.trim().startsWith("filename")) {
-                return content.substring(content.indexOf("=") + 2, content.length() - 1);
-            }
-        }
-        return "unknown";
-    }
-
-    public static String removeAccents(String s) {
-        String temp = Normalizer.normalize(s, Normalizer.Form.NFD);
-        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        return pattern.matcher(temp).replaceAll("").replace('đ', 'd').replace('Đ', 'D');
     }
 }

@@ -47,11 +47,11 @@ FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Thêm dữ liệu mẫu
-INSERT INTO users (username, password, full_name, role)
-VALUES ('teacher1', 'teacher123', 'Nguyễn Văn A', 'TEACHER');
+INSERT INTO users (username, password, full_name, email, phone, role)
+VALUES ('teacher1', 'teacher123', 'Nguyễn Văn A', 'teacher1@example.com', '0901234567', 'TEACHER');
 
-INSERT INTO users (username, password, full_name, role)
-VALUES ('student1', 'student123', 'Nguyễn Văn B', 'STUDENT');
+INSERT INTO users (username, password, full_name, email, phone, role)
+VALUES ('student1', 'student123', 'Nguyễn Văn B', 'student1@example.com', '0912345678', 'STUDENT');
 
 INSERT INTO assignments (title, description, teacher_id)
 VALUES ('Java basic', 'làm bài 3', 1);
