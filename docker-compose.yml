@@ -9,15 +9,22 @@ services:
       - DB_URL=jdbc:mysql://mysql-db:3306/Quanlyclass
       - DB_USER=root
       - DB_PASSWORD=12345678
+      # GIỚI HẠN JAVA HEAP: Quan trọng để Java không ăn hết RAM của container
+      - JAVA_OPTS=-Xmx512m -Xms256m
     depends_on:
       - mysql-db
     volumes:
       - ./uploads:/usr/local/tomcat/webapps/ROOT/uploads
+    # GIỚI HẠN RAM CHO CONTAINER APP
+    deploy:
+      resources:
+        limits:
+          memory: 700M
 
   mysql-db:
     image: mysql:8.0
     restart: always
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: Quanlyclass
       MYSQL_ROOT_PASSWORD: 12345678
@@ -26,6 +33,11 @@ services:
       - mysql_data:/var/lib/mysql
     ports:
       - "3307:3306"
+    # GIỚI HẠN RAM CHO CONTAINER MYSQL
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   mysql_data:
